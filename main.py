@@ -3,6 +3,7 @@ from CPUPRofiling import *
 from LayerMapping import *
 from config import *
 
+# keep all the reconfigurable parameters in config.py
 
 def main():
     cpuProfiling()
