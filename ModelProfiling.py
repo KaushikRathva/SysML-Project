@@ -14,7 +14,7 @@ Wv = d_model * dv
 Wff1 = d_model*4*d_model
 Wff2 = 4*d_model*d_model
 
-comuteBlocks = ["MHA", "Add&Norm", "FFN", "Linear", "Softmax"]
+Layers = ["MHA", "Add&Norm", "FFN", "Linear", "Softmax"]
 #TO                         MHA     A&N     FFN     Linear Softmax 
 modelTrafficProfile = [ [       0,      E,      0,      0,      0],#MHA from
                         [       0,      E,      E,      E,      0],#A&N
@@ -26,6 +26,14 @@ modelTrafficProfile = [ [       0,      E,      0,      0,      0],#MHA from
 modelMemProfile     = [h*(Wq+Wk+Wv+3*E),0,Wff1+Wff2+E+2,E+2,  E+1]
 for i in range(len(modelMemProfile)):
     modelMemProfile[i] *= p
+
+computeBlocks  =   [[Layers[0], Layers[1]], #MHA + A&N
+                    [Layers[2], Layers[1]], #FFN + A&N
+                    Layers[3],  Layers[4]
+                    #Linear     #SoftMAX
+                    ]
+                        #MHA + A&N, FFN + A&N, Linear, SotMAX
+computeBlockDupliation  =   [3,     2,          1,      1]
 
 # Model profilling 
 def modelProfiling():
