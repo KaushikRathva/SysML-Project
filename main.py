@@ -1,5 +1,5 @@
 from ModelProfiling import *
-from CPUPRofiling import *
+from CPUProfiling import *
 from LayerMapping import *
 from config import *
 
