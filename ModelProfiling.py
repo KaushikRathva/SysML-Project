@@ -35,6 +35,10 @@ computeBlocks  =   [[Layers[0], Layers[1]], #MHA + A&N
                         #MHA + A&N, FFN + A&N, Linear, SotMAX
 computeBlockDupliation  =   [3,     2,          1,      1]
 
+modelProfile = [Layers, modelTrafficProfile, modelMemProfile]
+computeBlockProfile = [computeBlocks, computeBlockDupliation]
+
 # Model profilling 
 def modelProfiling():
     print("This is model profiling")
+    return modelProfile, computeBlockProfile
