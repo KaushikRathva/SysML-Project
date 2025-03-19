@@ -22,7 +22,6 @@ modelTrafficProfile = [ [       0,      E,      0,      0,      0],#MHA from
                         [       0,      0,      0,      0,      E],#Linear
                         [       E,      0,      0,      0,      0]]#SoftMAX
 
-
 modelMemProfile     = [h*(Wq+Wk+Wv+3*E),0,Wff1+Wff2+E+2,E+2,  E+1]
 for i in range(len(modelMemProfile)):
     modelMemProfile[i] *= p
@@ -32,10 +31,17 @@ computeBlocks  =   [[Layers[0], Layers[1]], #MHA + A&N
                     Layers[3],  Layers[4]
                     #Linear     #SoftMAX
                     ]
-                        #MHA + A&N, FFN + A&N, Linear, SotMAX
+
+modelTrafficProfileBlockwise = [ [       0,      E,      0,      0],
+                                 [       0,      0,      E,      0] ,
+                                 [       0,      0,      0,      E],
+                                 [       0,      0,      0,      0]]
+
+memPerBlock = [modelMemProfile[0]+modelMemProfile[1],modelMemProfile[2]+modelMemProfile[1],modelMemProfile[3],modelMemProfile[4]]
+                        #MHA + A&N, FFN + A&N, Linear, SoftMAX
 computeBlockDupliation  =   [3,     2,          1,      1]
 
-modelProfile = [Layers, modelTrafficProfile, modelMemProfile]
+modelProfile = [Layers, modelTrafficProfileBlockwise, modelMemProfile, memPerBlock]
 computeBlockProfile = [computeBlocks, computeBlockDupliation]
 
 # Model profilling 
