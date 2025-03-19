@@ -14,7 +14,9 @@ Wv = d_model * dv
 Wff1 = d_model*4*d_model
 Wff2 = 4*d_model*d_model
 
+# Here put the functions for each layer
 Layers = ["MHA", "Add&Norm", "FFN", "Linear", "Softmax"]
+
 #TO                         MHA     A&N     FFN     Linear Softmax 
 modelTrafficProfile = [ [       0,      E,      0,      0,      0],#MHA from
                         [       0,      E,      E,      E,      0],#A&N
