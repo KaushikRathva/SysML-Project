@@ -49,10 +49,13 @@ class Deployer:
             time.sleep(5)  # Wait for 5 seconds
 
     # Assuming mapping as [["compBlock", "cpu_id"]]
-    # compBlock as [Layer_id]
+    # compBlock as [Layer] layer is a process of the function
     def pin_layers(mappings):
         for mapping in mappings:
-            pass
+            compBlock = mapping[0]
+            cpu_id = mapping[1]
+            for proc_idx in compBlock:
+                proc_idx.cpu_affinity([cpu_id])
 
     def exit_processes(self, ):
         len_layers = len(self.layers)
