@@ -1,6 +1,7 @@
 # Import python file with model implementted.
 import multiprocessing
 import time
+import psutil
 # from ModelProfiling import *
 # from CPUProfiling import *
 # import multiprocessing
@@ -18,7 +19,7 @@ def worker(send_conn, recv_conn, w_n):
     send_conn.close()
 
 class Deployer:
-    pipes = {}
+    pipes = []
     layers = []
     # comp_blocks = []
     processes = []
@@ -27,7 +28,7 @@ class Deployer:
         self.layers = layers
         # self.comp_blocks = blocks
         # self.pipes = {layer: multiprocessing.Pipe() for layer in layers}
-        self.pipes = {i: multiprocessing.Pipe() for i in range(len(layers) + 1)}
+        self.pipes = [multiprocessing.Pipe() for i in range(len(layers) + 1)]
         print(self.pipes)
         # print(self.pipes)
     def create_processes(self,):
@@ -36,25 +37,33 @@ class Deployer:
             p = multiprocessing.Process(target=self.layers[layer_idx], args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0], layer_idx))
             self.processes.append(p)
             p.start()
-        try:
-            while True:
-                # Main process sends initial message to the first worker
-                self.pipes[0][1].send('Hello from main process')
+        while True:
+            # Main process sends initial message to the first worker
+            self.pipes[0][1].send('Hello from main process')
 
-                # Main process receives final message from the last worker
-                final_message = self.pipes[len_layers][0].recv()
-                print(f'Main process received: {final_message}')
-                print("#################################")
-                
-                time.sleep(5)  # Wait for 5 seconds
-        except KeyboardInterrupt:
-            print("Terminating processes...")
-            for idx in range(len_layers):
-                self.pipes[idx+1][1].send('exit')
+            # Main process receives final message from the last worker
+            final_message = self.pipes[len_layers][0].recv()
+            print(f'Main process received: {final_message}')
+            print("#################################")
+            
+            time.sleep(5)  # Wait for 5 seconds
+
+    # Assuming mapping as [["compBlock", "cpu_id"]]
+    # compBlock as [Layer_id]
+    def pin_layers(mappings):
+        for mapping in mappings:
+            pass
+
+    def exit_processes(self, ):
+        len_layers = len(self.layers)
+        print("Terminating processes...")
+        for idx in range(len_layers):
+            self.pipes[idx+1][1].send('exit')
 
         # Join all processes
         for p in self.processes:
             p.join()
+    
     
 
 layers = [worker, worker, worker, worker] 
