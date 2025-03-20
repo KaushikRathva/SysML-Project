@@ -66,10 +66,3 @@ class Deployer:
         # Join all processes
         for p in self.processes:
             p.join()
-    
-    
-
-layers = [worker, worker, worker, worker] 
-deploy = Deployer(layers)
-
-deploy.create_processes()
