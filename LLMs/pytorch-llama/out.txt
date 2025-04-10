@@ -1,0 +1,36 @@
+Loading checkpoint "llama-2-7b/consolidated.00.pth"
+Loaded checkpoint in 5.64s
+started process for layer :  Process-1 with pid :  1535798
+started process for layer :  Process-2 with pid :  1535799
+started process for layer :  Process-3 with pid :  1535800
+started process for layer :  Process-4 with pid :  1535801
+started process for layer :  Process-5 with pid :  1535802
+started process for layer :  Process-6 with pid :  1535803
+started process for layer :  Process-7 with pid :  1535804
+started process for layer :  Process-8 with pid :  1535805
+started process for layer :  Process-9 with pid :  1535806
+started process for layer :  Process-10 with pid :  1535807
+started process for layer :  Process-11 with pid :  1535812
+started process for layer :  Process-12 with pid :  1535814
+started process for layer :  Process-13 with pid :  1535815
+started process for layer :  Process-14 with pid :  1535816
+started process for layer :  Process-15 with pid :  1535817
+started process for layer :  Process-16 with pid :  1535819
+started process for layer :  Process-17 with pid :  1535820
+started process for layer :  Process-18 with pid :  1535821
+started process for layer :  Process-19 with pid :  1535822
+started process for layer :  Process-20 with pid :  1535846
+started process for layer :  Process-21 with pid :  1535847
+started process for layer :  Process-22 with pid :  1535849
+started process for layer :  Process-23 with pid :  1535850
+started process for layer :  Process-24 with pid :  1535851
+started process for layer :  Process-25 with pid :  1535852
+started process for layer :  Process-26 with pid :  1535853
+started process for layer :  Process-27 with pid :  1535854
+started process for layer :  Process-28 with pid :  1535855
+started process for layer :  Process-29 with pid :  1535856
+started process for layer :  Process-30 with pid :  1535857
+started process for layer :  Process-31 with pid :  1535858
+started process for layer :  Process-32 with pid :  1535859
+Created model in 42.63s
+Loaded state dict in 49.52s

@@ -1,0 +1,37 @@
+Loading checkpoint "llama-2-7b/consolidated.00.pth"
+Loaded checkpoint in 5.51s
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-1 with pid :  1533007
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-2 with pid :  1533013
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-3 with pid :  1533017
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-4 with pid :  1533018
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-5 with pid :  1533020
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-6 with pid :  1533021
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-7 with pid :  1533027
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights
+started process for layer :  Process-8 with pid :  1533028
+in apply_self_attention
+Linear(in_features=4096, out_features=4096, bias=False)
+printing weights

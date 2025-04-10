@@ -51,16 +51,26 @@ class LLaMA:
         else:
             torch.set_default_tensor_type(torch.BFloat16Tensor)
         
-        model = Transformer(model_args).to(device)
+        state_dict_keys = ["attention.wq.weight", "attention.wk.weight", "attention.wv.weight", "attention.wo.weight", "feed_forward.w1.weight", "feed_forward.w2.weight", "feed_forward.w3.weight", "attention_norm.weight", "ffn_norm.weight"]
+        state_dict_layers = [{} for i in range(model_args.n_layers)]
+        for layer_idx in range(model_args.n_layers):
+            for key in state_dict_keys:
+                state_dict_layers[layer_idx][key] = checkpoint[f"layers.{layer_idx}.{key}"]
+        
+        model = Transformer(model_args, state_dict_layers).to(device)
+        print(f"Created model in {time.time() - prev_time:.2f}s")
+               
 
         if load_model:
             # The only unmatched key in the checkpoint is rope.freqs. Remove it
             del checkpoint['rope.freqs']
             model.load_state_dict(checkpoint, strict=True)
             print(f"Loaded state dict in {time.time() - prev_time:.2f}s")
-            print(model.layers[0].attention.wq.weight)
-            print(model.layers[0].attention.wq.weight)
-            print(model.layers[0].attention.wq.weight)
+            # print(model.layers[0].attention.wq.weight)
+            # print(model.layers[0].attention.wq.weight)
+            # print(model.layers[0].attention.wq.weight)
+
+                # print("state_dict_layer", state_dict_layer)
         
         return LLaMA(model, tokenizer, model_args)
 
