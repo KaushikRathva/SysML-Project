@@ -1,1 +1,8 @@
 psutil
+
+# requirments of LLMs
+
+# pytorch-llama
+torch
+sentencepiece
+tqdm
