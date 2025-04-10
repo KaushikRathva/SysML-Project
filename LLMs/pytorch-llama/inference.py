@@ -1,6 +1,7 @@
 # from typing import Optional
 from typing import List, Optional
 import torch
+import torch.multiprocessing as multiprocessing
 import time
 from pathlib import Path
 import json
@@ -8,9 +9,13 @@ from sentencepiece import SentencePieceProcessor
 from tqdm import tqdm
 
 from model import ModelArgs, Transformer
+import multiprocessing as mp
+# import dill
+# print(dill.__version__)
+# mp.get_context("spawn").Process = dill.Process
+
 
 class LLaMA:
-
     def __init__(self, model: Transformer, tokenizer: SentencePieceProcessor, model_args: ModelArgs):
         self.model = model
         self.tokenizer = tokenizer
@@ -53,6 +58,9 @@ class LLaMA:
             del checkpoint['rope.freqs']
             model.load_state_dict(checkpoint, strict=True)
             print(f"Loaded state dict in {time.time() - prev_time:.2f}s")
+            print(model.layers[0].attention.wq.weight)
+            print(model.layers[0].attention.wq.weight)
+            print(model.layers[0].attention.wq.weight)
         
         return LLaMA(model, tokenizer, model_args)
 
@@ -128,10 +136,14 @@ class LLaMA:
         # Get the token position in the vocabulary corresponding to the sampled index
         next_token = torch.gather(probs_idx, -1, next_token) 
         return next_token
+    def exit_model(self):
+        self.model.exit_model()
+        print("Model exited successfully")
 
 
 
 if __name__ == '__main__':
+    # multiprocessing.set_start_method("spawn", force=True)
     torch.manual_seed(0)
 
     allow_cuda = False
@@ -169,4 +181,7 @@ if __name__ == '__main__':
     for i in range(len(out_texts)):
         print(f'{out_texts[i]}')
         print('-' * 50)
+        
+    model.exit_model()
+    
 

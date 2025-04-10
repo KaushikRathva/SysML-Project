@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-import multiprocessing
+import torch.multiprocessing as multiprocessing
 from typing import Optional
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import threading
 
 
 @dataclass
@@ -123,17 +124,42 @@ class SelfAttention(nn.Module):
         self,
         x: torch.Tensor,
         start_pos: int,
-        freqs_complex: torch.Tensor
+        freqs_complex: torch.Tensor,
+        wq: Optional[torch.Tensor] = None,
+        wk: Optional[torch.Tensor] = None,
+        wv: Optional[torch.Tensor] = None,
+        wo: Optional[torch.Tensor] = None,
     ):
         print("Runnning self-attention forward waiting for weight...")
+        print(x)
         batch_size, seq_len, _ = x.shape  # (B, 1, Dim)
+        print (f"batch_size : {batch_size} , seq_len : {seq_len} , start_pos : {start_pos}") 
+        print(self.wq)
 
+        # print(self.wq.weight)
+        # print(self.wk.weight)
+        # print(self.wv.weight)
+        
+        print(wq.weight)
+        print(wk.weight)
+        print(wv.weight)
+        
+        print(f"x : {x} , wq : {wq.weight} , wk : {wk.weight} , wv : {wv.weight}")
+        
+        # # (B, 1, Dim) -> (B, 1, H_Q * Head_Dim)
+        # xq = self.wq(x)
+        # # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
+        # xk = self.wk(x)
+        # # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
+        # xv = self.wv(x)
+        
         # (B, 1, Dim) -> (B, 1, H_Q * Head_Dim)
-        xq = self.wq(x)
+        xq = wq(x)
         # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
-        xk = self.wk(x)
+        xk = wk(x)
         # (B, 1, Dim) -> (B, 1, H_KV * Head_Dim)
-        xv = self.wv(x)
+        xv = wv(x)
+
 
         print("calculating q,k,v")
         # (B, 1, H_Q * Head_Dim) -> (B, 1, H_Q, Head_Dim)
@@ -143,24 +169,24 @@ class SelfAttention(nn.Module):
         # (B, 1, H_KV * Head_Dim) -> (B, 1, H_KV, Head_Dim)
         xv = xv.view(batch_size, seq_len, self.n_kv_heads, self.head_dim)
 
-        print("calculated q,k,v")
+        # print("calculated q,k,v")
         # (B, 1, H_Q, Head_Dim) --> (B, 1, H_Q, Head_Dim)
         xq = apply_rotary_embeddings(xq, freqs_complex, device=x.device)
         # (B, 1, H_KV, Head_Dim) --> (B, 1, H_KV, Head_Dim)
         xk = apply_rotary_embeddings(xk, freqs_complex, device=x.device)
 
-        print("calculating q k with rotary embedding")
+        # print("calculating q k with rotary embedding")
         # Replace the entry in the cache
         self.cache_k[:batch_size, start_pos : start_pos + seq_len] = xk
         self.cache_v[:batch_size, start_pos : start_pos + seq_len] = xv
 
-        print("replacing k v in kv cache")
+        # print("replacing k v in kv cache")
         # (B, Seq_Len_KV, H_KV, Head_Dim)
         keys = self.cache_k[:batch_size, : start_pos + seq_len]
         # (B, Seq_Len_KV, H_KV, Head_Dim)
         values = self.cache_v[:batch_size, : start_pos + seq_len]
 
-        print("loaded k v from kv cache")
+        # print("loaded k v from kv cache")
         # Since every group of Q shares the same K and V heads, just repeat the K and V heads for every Q in the same group.
 
         # (B, Seq_Len_KV, H_KV, Head_Dim) --> (B, Seq_Len_KV, H_Q, Head_Dim)
@@ -168,7 +194,7 @@ class SelfAttention(nn.Module):
         # (B, Seq_Len_KV, H_KV, Head_Dim) --> (B, Seq_Len_KV, H_Q, Head_Dim)
         values = repeat_kv(values, self.n_rep)
 
-        print("starting selfattention execution..")
+        # print("starting selfattention execution..")
         # (B, 1, H_Q, Head_Dim) -> (B, H_Q, 1, Head_Dim)
         xq = xq.transpose(1, 2)
         # (B, Seq_Len_KV, H_Q, Head_Dim) -> (B, H_Q, Seq_Len_KV, Head_Dim)
@@ -185,9 +211,8 @@ class SelfAttention(nn.Module):
         output = torch.matmul(scores, values)
         # (B, H_Q, 1, Head_Dim) -> (B, 1, H_Q, Head_Dim) -> (B, 1, Dim)
         output = (output.transpose(1, 2).contiguous().view(batch_size, seq_len, -1))
-        print("completed selfattention")
+        # print("completed selfattention")
         return self.wo(output) # (B, 1, Dim) -> (B, 1, Dim)
-
 
 class FeedForward(nn.Module):
     def __init__(
@@ -208,14 +233,14 @@ class FeedForward(nn.Module):
         self.w3 = nn.Linear(args.dim, hidden_dim, bias=False)
 
     def forward(self, x: torch.Tensor):
-        # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
-        swish = F.silu(self.w1(x))
-        # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
-        x_V = self.w3(x)
-        # (B, Seq_Len, Hidden_Dim) * (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Hidden_Dim)
-        x = swish * x_V
-        # (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Dim)
-        x = self.w2(x)
+        # # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
+        # swish = F.silu(self.w1(x))
+        # # (B, Seq_Len, Dim) --> (B, Seq_Len, Hidden_Dim)
+        # x_V = self.w3(x)
+        # # (B, Seq_Len, Hidden_Dim) * (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Hidden_Dim)
+        # x = swish * x_V
+        # # (B, Seq_Len, Hidden_Dim) --> (B, Seq_Len, Dim)
+        # x = self.w2(x)
         return x
 
 
@@ -228,36 +253,55 @@ class EncoderBlock(nn.Module):
         self.args=args
         self.attention = SelfAttention(args)
         self.feed_forward = FeedForward(args)
+        
+        # self.attention.share_memory()
+        # self.feed_forward.share_memory()
 
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
-        
-        self.forward_proc_create()
+        self.processCreated = False
 
     def forward_proc_create(self):
+        if self.processCreated:
+            print("Processes already created")
+            return
+        
         self.layers = [self.apply_attention_norm, self.apply_self_attention, self.apply_ffn_norm, self.apply_feed_forward]
+        self.args = [self.attention_norm, self.args, self.ffn_norm, self.feed_forward]
+        # self.attention.share_memory()
+        # self.feed_forward.share_memory()
+        self.processCreated = True
         # self.layers = [self.apply_attention_norm, self.apply_ffn_norm]
         # self.layers = [self.apply_self_attention]
         self.len_layers = len(self.layers)
         self.pipes = [multiprocessing.Pipe() for i in range(self.len_layers + 1)]
+        # main -> l1 -> l2 -> l3 -> l4 -> main
         self.processes = []
         # print(self.pipes)
 
         for layer_idx in range(self.len_layers):
+            # self.args[layer_idx].share_memory()
+
             # print(f"pipes for {self.layers[layer_idx]}: {self.pipes[layer_idx]} -> {self.pipes[layer_idx]}")
-            p = multiprocessing.Process(target=self.layers[layer_idx], args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0]))
-            self.processes.append(p)
-            p.start()
+            # t = multiprocessing.Process(target=self.layers[layer_idx], args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0], self.args[layer_idx]))
+            t = multiprocessing.Process(target=self.layers[layer_idx], args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0], self.args[layer_idx]))
+            # t = threading.Thread(target=self.layers[layer_idx], args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0]))
+            self.processes.append(t)
+            t.start()
+            # args=(self.pipes[layer_idx + 1][1], self.pipes[layer_idx][0])
+            # self.layers[layer_idx](args[0], args[1])
+
     def forward_proc_runner(self, x: torch.Tensor, meta_d):       
         # Main process sends initial message to the first worker
         self.pipes[0][1].send((x, meta_d))
         # Main process receives final message from the last worker
         out, meta_d = self.pipes[self.len_layers][0].recv()
         # print(f'Main process received: {x, meta_d}')
-        print("#################################")
+        # print("#################################")
         return out
             # time.sleep(5)  # Wait for 5 seconds
         # return [self.apply_attention_norm, self.apply_self_attention, self.apply_ffn_norm, self.apply_feed_forward], x, {'start_pos':start_pos, 'freqs_complex': freqs_complex}
+    
     def exit_processes(self, ):
         len_layers = len(self.layers)
         print("Terminating processes...")
@@ -265,73 +309,92 @@ class EncoderBlock(nn.Module):
             self.pipes[idx+1][1].send(('exit', {}))
 
         # Join all processes
-        for p in self.processes:
-            p.join()
+        # for p in self.processes:
+        #     p.join()
+            
+        # Close all pipes
+        for pipe in self.pipes:
+            pipe[0].close()
+            pipe[1].close()
+
 
     def forward(self, x: torch.Tensor, start_pos: int, freqs_complex: torch.Tensor):
-        if(x == 'exit'):
-            print("Exiting")
-            self.exit_processes()
-        else:
-            meta_d = {'start_pos': start_pos, 'freqs_complex': freqs_complex}
-            return self.forward_proc_runner(x, meta_d=meta_d)
-
-    def apply_attention_norm(self, send_conn, recv_conn):
+        print("in encoder block forward")
+        print(self.attention.wq.weight)
+        self.forward_proc_create()
+        meta_d = {'start_pos': start_pos, 'freqs_complex': freqs_complex}
+        return self.forward_proc_runner(x, meta_d=meta_d)
+    
+    def apply_attention_norm(self, send_conn, recv_conn, args: ModelArgs):
+        print(args)
         # self.attention_norm = RMSNorm(self.args.dim, eps=self.args.norm_eps)
         while True:
             print("waiting for input at apply_attention_norm")
             x,meta_d = recv_conn.recv()
             print("got for input at apply_attention_norm")
             if x == "exit":
-                recv_conn.close()
-                send_conn.close()
+                send_conn.send((x, meta_d))
+                # recv_conn.close()
+                # send_conn.close()
                 exit()
             else:
-                x = self.attention_norm(x).detach()
+                x = norm_layer.forward(x).detach()
                 send_conn.send((x, meta_d))
 
-    def apply_self_attention(self, send_conn, recv_conn):
+    def apply_self_attention(self, send_conn, recv_conn, attn_weights):
         # self.attention = SelfAttention(self.args)
         while True:
             print("waiting for input at apply_self_attention")
             x, meta_d = recv_conn.recv()
             print("got for input at apply_self_attention")
+            print("in apply_self_attention a")
+            # for name, param in attnetion_layer.named_parameters():
+            #     print(name, param.data)
+            print(attn_weights[0])
+            print(attn_weights[1])
+            print(attn_weights[2])
+            print(attn_weights[3])
+            print("in apply_self_attention b")
             if x == "exit":
-                recv_conn.close()
-                send_conn.close()
+                send_conn.send((x, meta_d))
+                # recv_conn.close()
+                # send_conn.close()
                 exit()
             else:
-                x = (x + self.attention.forward(x, meta_d['start_pos'], meta_d['freqs_complex'])).detach()
-                print("calculated apply_self_attention")
+                x = (x + self.attention.forward(x, meta_d['start_pos'], meta_d['freqs_complex']), attn_weights[0], attn_weights[1], attn_weights[2], attn_weights[3]).detach()
+                # print("calculated apply_self_attention")
                 send_conn.send((x, meta_d))
 
-    def apply_ffn_norm(self, send_conn, recv_conn):        
+    def apply_ffn_norm(self, send_conn, recv_conn, norm_layer):        
         # self.ffn_norm = RMSNorm(self.args.dim, eps=self.args.norm_eps)
         while True:
             print("waiting for input at apply_ffn_norm")
             x, meta_d= recv_conn.recv()
             print("got for input at apply_ffn_norm")
             if x == "exit":
-                recv_conn.close()
-                send_conn.close()
+                send_conn.send((x, meta_d))
+                # recv_conn.close()
+                # send_conn.close()
                 exit()
             else:
-                x = self.ffn_norm(x).detach()
+                x = norm_layer.forward(x).detach()
                 send_conn.send((x, meta_d))
 
-    def apply_feed_forward(self, send_conn, recv_conn):
+    def apply_feed_forward(self, send_conn, recv_conn, feed_forward_layer):
         # self.feed_forward = FeedForward(self.args)
         while True:
             print("waiting for input at apply_feed_forward")
             x, meta_d= recv_conn.recv()
             print("got for input at apply_feed_forward")
             if x == "exit":
-                recv_conn.close()
-                send_conn.close()
+                send_conn.send((x, meta_d))
+                # recv_conn.close()
+                # send_conn.close()
                 exit()
             else:
-                x = (x + self.feed_forward.forward(x)).detach()
+                x = (x + feed_forward_layer.forward(x)).detach()
                 send_conn.send((x, meta_d))
+
     
 class Transformer(nn.Module):
 
@@ -359,6 +422,8 @@ class Transformer(nn.Module):
         # return 
 
     def forward(self, tokens: torch.Tensor, start_pos: int):
+        print("in Transformer forward")
+        print(self.layers[0].attention.wq.weight)
         # (B, Seq_Len)
         batch_size, seq_len = tokens.shape
         assert seq_len == 1, "Only one token at a time can be processed"
@@ -383,5 +448,9 @@ class Transformer(nn.Module):
         # for layer in self.layers:
         #     layer('exit', start_pos, freqs_complex)
 
-        print(f"completed execution and terminated processes Output : {output}")
+        # print(f"completed execution and terminated processes Output : {output}")
         return output
+    def exit_model(self):
+        for layer in self.layers:
+            layer.exit_processes()
+        print("Terminated all processes")
